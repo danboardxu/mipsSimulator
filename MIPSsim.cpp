@@ -1303,7 +1303,105 @@ class Dissassembler{
 
 	}
 
+
 	void simulate(){
+		int index = 0;
+		int PC = 256;
+		instr_decoded *ptr;
+		bool jump = 0;
+		long jump_add = 0;
+		int cycle = 0;
+
+		while(1){
+			++cycle;
+			index = (PC - 256)/4;
+			ptr = instr[index];
+			if(ptr->ins == opCodes.J){
+				PC = ptr->signed_offset;
+				continue;
+
+			}else if(ptr->ins == opCodes.JR){
+				PC = twos_complement_2_num(R[ptr->rs]);
+				continue;
+
+			}else if(ptr->ins == opCodes.BEQ){
+				long rs_val = twos_complement_2_num(R[ptr->rs]);
+				long rt_val = twos_complement_2_num(R[ptr->rt]);
+
+				if(rs_val == rt_val){
+					PC = PC + 4 + ptr->signed_offset;
+					continue;
+				}
+
+			}else if(ptr->ins == opCodes.BLTZ){
+				long rs_val = twos_complement_2_num(R[ptr->rs]);
+
+				if(rs_val < 0){
+					PC = PC + 4 + ptr->signed_offset;
+					continue;
+				}
+
+			}else if(ptr->ins == opCodes.BGTZ){
+				long rs_val = twos_complement_2_num(R[ptr->rs]);
+
+				if(rs_val > 0){
+					PC = PC + 4 + ptr->signed_offset;
+					continue;
+				}
+
+			}else if(ptr->ins == opCodes.BREAK){
+
+				break;
+
+			}else if(ptr->ins == opCodes.SW){
+				long rs_val = twos_complement_2_num(R[ptr->rs]);
+				
+				memory[rs_val + ptr->signed_offset] = R[ptr->rt];
+
+			}else if(ptr->ins == opCodes.LW){
+				long rs_val = twos_complement_2_num(R[ptr->rs]);
+				
+				R[ptr->rt] = memory[rs_val + ptr->signed_offset];
+
+			}else if(ptr->ins == opCodes.SLL){
+				R[ptr->rd] = R[ptr->rt] << ptr->sa; 
+
+			}else if(ptr->ins == opCodes.SRL){
+				R[ptr->rd] = R[ptr->rt] >> ptr->sa; 
+
+			}else if(ptr->ins == opCodes.SRA){
+
+			}else if(ptr->ins == opCodes.NOP){
+				PC = PC +4;
+				continue;
+
+			}else if(ptr->ins == opCodes.ADD){
+
+			}else if(ptr->ins == opCodes.SUB){
+
+			}else if(ptr->ins == opCodes.MUL){
+
+			}else if(ptr->ins == opCodes.AND){
+
+			}else if(ptr->ins == opCodes.OR){
+
+			}else if(ptr->ins == opCodes.XOR){
+
+			}else if(ptr->ins == opCodes.NOR){
+
+			}else if(ptr->ins == opCodes.SLT){
+
+			}else if(ptr->ins == opCodes.ADDI){
+
+			}else if(ptr->ins == opCodes.ANDI){
+
+			}else if(ptr->ins == opCodes.ORI){
+
+			}else if(ptr->ins == opCodes.XORI){
+
+			}
+
+		}
 
 	}
 
