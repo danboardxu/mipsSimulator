@@ -1,1 +1,4 @@
 Mips simulator + assembler + disaasembler for incomplete instructions
+
+<h3>Compiling:</h3>
+	<pre>make mips</pre>
