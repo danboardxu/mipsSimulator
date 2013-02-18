@@ -1,10 +1,8 @@
 #include <string>
 #include <map>
 #include <iostream>
-#include <stdio.h>
-#include <cstdlib>
 #include <fstream>
-#include <malloc.h>
+#include <vector>
 
 using namespace std;
 
@@ -229,6 +227,20 @@ public:
 };
 
 
+class instr_decoded{
+
+public:
+	instr32 ins;
+	long rs,rd,rt,sa,base;
+	long signed_offset;
+
+	instr_decoded(){
+		rs = rd = rt = sa = signed_offset = base = 0;
+	}
+};
+
+
+
 
 class Dissassembler{
 
@@ -239,6 +251,8 @@ class Dissassembler{
 		int instr_offset;
 		int code_size;
 		OPCODES opCodes;
+		ofstream out;
+		vector<instr_decoded> instr;
 
 
 	Dissassembler(){
@@ -248,7 +262,16 @@ class Dissassembler{
 		for(int i;i<32;i++){
 			R[i] = 0;
 		}
+
+		out.open("dis.txt");
 	}
+
+	void print_instr32(instr32 mem){
+			for(int i=0;i< 32;i++){
+				out << mem.bits[i];
+			}
+			//cout << endl;
+		}
 
 	void file2memory(string file){
 		string line;
@@ -347,9 +370,508 @@ class Dissassembler{
 				tempPC = (long)PC + 4;
 				tempPC = tempPC & mask4;
 				temp = temp | tempPC;
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "J #" << temp.toNum() << endl;
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "J #" << temp.toNum() << endl;
+
+			}else if(op == opCodes.JR){
+				instr32 maskrs("00000011111000000000000000000000");
+
+				temp = memory[i] & maskrs;
+				temp = temp >> 21;
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << 'JR R' << temp.toNum() << endl;
+
+			}else if(op == opCodes.BEQ){
+				instr32 mask16("00000000000000001111111111111111");
+				long offset;
+				long rs_val,rt_val;
+				rs_val = rs(memory[i]);
+				rt_val = rt(memory[i]);
+
+				temp = memory[i] & mask16;
+				temp = temp << 2;
+				//out << (long)PC + 4 << endl;;
+				tempPC = (long)PC + 4;
+				if(temp.bits[16] == 1){
+					temp = ~ temp;
+					instr32 mask18("00000000000000111111111111111111");
+					temp = temp & mask18;
+					temp = temp + instr32("00000000000000000000000000000001");
+					offset = -temp.toNum();
+				}else{
+					offset = temp.toNum();
+
+				}
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "BEQ R" << rs_val <<", R" << rt_val <<", #" << offset << endl;
+
+			}else if(op == opCodes.BLTZ){
+				instr32 mask16("00000000000000001111111111111111");
+				long offset;
+				long rs_val;
+				rs_val = rs(memory[i]);
+
+				temp = memory[i] & mask16;
+				temp = temp << 2;
+				//out << (long)PC + 4 << endl;;
+				tempPC = (long)PC + 4;
+				if(temp.bits[16] == 1){
+					temp = ~ temp;
+					instr32 mask18("00000000000000111111111111111111");
+					temp = temp & mask18;
+					temp = temp + instr32("00000000000000000000000000000001");
+					offset = -temp.toNum();
+				}else{
+					offset = temp.toNum();
+
+				}
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "BLTZ R" << rs_val <<", #" << offset << endl;
+
+			}else if(op == opCodes.BGTZ){
+				instr32 mask16("00000000000000001111111111111111");
+				long offset;
+				long rs_val;
+				rs_val = rs(memory[i]);
+
+				temp = memory[i] & mask16;
+				temp = temp << 2;
+				//out << (long)PC + 4 << endl;;
+				tempPC = (long)PC + 4;
+				if(temp.bits[16] == 1){
+					temp = ~ temp;
+					instr32 mask18("00000000000000111111111111111111");
+					temp = temp & mask18;
+					temp = temp + instr32("00000000000000000000000000000001");
+					offset = -temp.toNum();
+				}else{
+					offset = temp.toNum();
+
+				}
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "BGTZ R" << rs_val <<", #" << offset << endl;
+
+			}else if(op == opCodes.BREAK){
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "BREAK" << endl;
+				break;
+
+			}else if(op == opCodes.SW){
+				instr32 mask16("00000000000000001111111111111111");
+				long offset;
+				long rs_val,rt_val;
+				rs_val = rs(memory[i]);
+				rt_val = rt(memory[i]);
+
+				temp = memory[i] & mask16;
+				if(temp.bits[18] == 1){
+					temp = ~ temp;
+					temp = temp & mask16;
+					temp = temp + instr32("00000000000000000000000000000001");
+					offset = -temp.toNum();
+				}else{
+					offset = temp.toNum();
+
+				}
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "SW R" << rt_val <<", " << offset << "(R" << rs_val << ")" << endl;
+
+			}else if(op == opCodes.LW){
+				instr32 mask16("00000000000000001111111111111111");
+				long offset;
+				long rs_val,rt_val;
+				rs_val = rs(memory[i]);
+				rt_val = rt(memory[i]);
+
+				temp = memory[i] & mask16;
+				if(temp.bits[18] == 1){
+					temp = ~ temp;
+					temp = temp & mask16;
+					temp = temp + instr32("00000000000000000000000000000001");
+					offset = -temp.toNum();
+				}else{
+					offset = temp.toNum();
+
+				}
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "LW R" << rt_val <<", " << offset << "(R" << rs_val << ")" << endl;
+
+			}else if(op == opCodes.SLL){
+				instr32 mask16("00000000000000001111111111111111");
+				long offset;
+				long rd_val,rt_val,sa_val;
+				rd_val = rd(memory[i]);
+				rt_val = rt(memory[i]);
+				sa_val = sa(memory[i]);
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "SLL R" << rd_val <<", R" << rt_val << ", #" << sa_val << endl;
+
+			}else if(op == opCodes.SRL){
+				instr32 mask16("00000000000000001111111111111111");
+				long offset;
+				long rd_val,rt_val,sa_val;
+				rd_val = rd(memory[i]);
+				rt_val = rt(memory[i]);
+				sa_val = sa(memory[i]);
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "SRL R" << rd_val <<", R" << rt_val << ", #" << sa_val << endl;
+
+			}else if(op == opCodes.SRA){
+				instr32 mask16("00000000000000001111111111111111");
+				long offset;
+				long rd_val,rt_val,sa_val;
+				rd_val = rd(memory[i]);
+				rt_val = rt(memory[i]);
+				sa_val = sa(memory[i]);
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "SRA R" << rd_val <<", R" << rt_val << ", #" << sa_val << endl;
+
+			}else if(op == opCodes.NOP){
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "NOP" << endl;
+
+			}else if(op == opCodes.ADD){
+				long rd_val,rt_val,rs_val;
+				rd_val = rd(memory[i]);
+				rt_val = rt(memory[i]);
+				rs_val = rs(memory[i]);
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "ADD R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+
+			}else if(op == opCodes.SUB){
+				long rd_val,rt_val,rs_val;
+				rd_val = rd(memory[i]);
+				rt_val = rt(memory[i]);
+				rs_val = rs(memory[i]);
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "SUB R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+
+			}else if(op == opCodes.MUL){
+				long rd_val,rt_val,rs_val;
+				rd_val = rd(memory[i]);
+				rt_val = rt(memory[i]);
+				rs_val = rs(memory[i]);
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "MUL R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+
+			}else if(op == opCodes.AND){
+				long rd_val,rt_val,rs_val;
+				rd_val = rd(memory[i]);
+				rt_val = rt(memory[i]);
+				rs_val = rs(memory[i]);
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "AND R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+
+			}else if(op == opCodes.OR){
+				long rd_val,rt_val,rs_val;
+				rd_val = rd(memory[i]);
+				rt_val = rt(memory[i]);
+				rs_val = rs(memory[i]);
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "OR R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+
+			}else if(op == opCodes.XOR){
+				long rd_val,rt_val,rs_val;
+				rd_val = rd(memory[i]);
+				rt_val = rt(memory[i]);
+				rs_val = rs(memory[i]);
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "XOR R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+
+			}else if(op == opCodes.NOR){
+				long rd_val,rt_val,rs_val;
+				rd_val = rd(memory[i]);
+				rt_val = rt(memory[i]);
+				rs_val = rs(memory[i]);
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "NOR R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+
+			}else if(op == opCodes.SLT){
+				long rd_val,rt_val,rs_val;
+				rd_val = rd(memory[i]);
+				rt_val = rt(memory[i]);
+				rs_val = rs(memory[i]);
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "SLT R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+
+			}else if(op == opCodes.ADDI){
+				instr32 mask16("00000000000000001111111111111111");
+				long offset;
+				long rt_val,rs_val;
+				rt_val = rt(memory[i]);
+				rs_val = rs(memory[i]);
+
+				temp = memory[i] & mask16;
+				if(temp.bits[18] == 1){
+					temp = ~ temp;
+					temp = temp & mask16;
+					temp = temp + instr32("00000000000000000000000000000001");
+					offset = -temp.toNum();
+				}else{
+					offset = temp.toNum();
+
+				}
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "ADDI R" << rt_val <<", R" << rs_val << ", #" << offset << endl;
+
+			}else if(op == opCodes.ANDI){
+				instr32 mask16("00000000000000001111111111111111");
+				long offset;
+				long rt_val,rs_val;
+				rt_val = rt(memory[i]);
+				rs_val = rs(memory[i]);
+
+				temp = memory[i] & mask16;
+				if(temp.bits[18] == 1){
+					temp = ~ temp;
+					temp = temp & mask16;
+					temp = temp + instr32("00000000000000000000000000000001");
+					offset = -temp.toNum();
+				}else{
+					offset = temp.toNum();
+
+				}
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "ANDI R" << rt_val <<", R" << rs_val << ", #" << offset << endl;
+
+			}else if(op == opCodes.ORI){
+				instr32 mask16("00000000000000001111111111111111");
+				long offset;
+				long rt_val,rs_val;
+				rt_val = rt(memory[i]);
+				rs_val = rs(memory[i]);
+
+				temp = memory[i] & mask16;
+				if(temp.bits[18] == 1){
+					temp = ~ temp;
+					temp = temp & mask16;
+					temp = temp + instr32("00000000000000000000000000000001");
+					offset = -temp.toNum();
+				}else{
+					offset = temp.toNum();
+
+				}
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "ORI R" << rt_val <<", R" << rs_val << ", #" << offset << endl;
+
+			}else if(op == opCodes.XORI){
+				instr32 mask16("00000000000000001111111111111111");
+				long offset;
+				long rt_val,rs_val;
+				rt_val = rt(memory[i]);
+				rs_val = rs(memory[i]);
+
+				temp = memory[i] & mask16;
+				if(temp.bits[18] == 1){
+					temp = ~ temp;
+					temp = temp & mask16;
+					temp = temp + instr32("00000000000000000000000000000001");
+					offset = -temp.toNum();
+				}else{
+					offset = temp.toNum();
+
+				}
+
+				print_instr32(memory[i]);
+				out << "\t" << PC << "\t" ;
+				out << "XORI R" << rt_val <<", R" << rs_val << ", #" << offset << endl;
+
+			}
+		}
+		
+	}
+
+	void disassemble_data(){
+		long num, PC;
+		instr32 temp;
+		int END_OF_INSTR = (data_offset-256)/4;
+
+		//cout << code_size << endl;
+		//cout << data_offset << endl;
+
+		for(int i = END_OF_INSTR;i<code_size;i++){
+			PC = 256 + i*4;
+			temp.copy(memory[i]);
+
+			if(temp.bits[0] == 1){
+				temp = ~ temp;
+				temp = temp + instr32("00000000000000000000000000000001");
+				num = -temp.toNum();
+			}else{
+				num = temp.toNum();
+			}
+
+			print_instr32(memory[i]);
+			out << "\t" << PC << "\t" ;
+			out << num << endl;
+		}
+
+		out.close();
+	}
+
+	instr32 make_mask(int start,int end,instr32 ins){
+		instr32 temp;
+		for(int i=start;i<=end;i++)
+			temp.bits[i] = 1;
+		return temp;
+	}
+
+	long twos_complement_2_num(instr32 ins){
+		instr32 temp;
+		temp.copy(ins);
+
+		if(ins.bits[0] == 1){
+			temp = ~temp;
+			temp = temp + instr32("00000000000000000000000000000001");
+			return -temp.toNum();
+		}else{
+			return ins.toNum();
+		}
+	}
+
+	instr32 num_2_twos_complement(long num){
+		instr32 temp;
+		if(num < 0){
+			temp = (-num);
+			temp = ~temp;
+			temp = temp + instr32("00000000000000000000000000000001");
+			return temp;
+
+		}else{
+			temp = num;
+			return temp;
+		}
+	}
+
+	void print_eight_data(int index){
+
+		for(int i=index;i<index+8;i++){
+			cout << "\t" << twos_complement_2_num(memory[i]);
+		}
+
+	}
+
+	void print_data(){
+		int END_OF_INSTR = (data_offset-256)/4;
+		int count = 1;
+		int offset = data_offset;
+		cout << "Data" << endl;
+
+		for(int i=END_OF_INSTR;i<code_size;i++){
+			cout << offset << ":";
+			print_eight_data(i);
+			i = i + 7;
+			offset =  (i+1)*4 + 252 + 4;
+			cout << endl;
+
+		}
+
+	}
+
+	void print_eight_regs(int index){
+
+		for(int i=index;i<index+8;i++){
+			cout << "\t" << twos_complement_2_num(R[i]);
+		}
+
+	}
+
+	string pad_digit(int num){
+		if(num > 9)
+			return "";
+		else
+			return "0";
+	}
+
+	void print_regs(){
+		cout << "Registers" << endl;
+
+		for(int i=0;i<32;i++){
+			cout << "R" << pad_digit(i) << i << ":";
+			print_eight_regs(i);
+			i = i + 7;
+			cout << endl;
+
+		}
+	}
+
+
+
+
+	void simulate(){
+
+		getDataOffset();
+		int END_OF_INSTR = (data_offset-256)/4;
+		instr32 mask;
+		instr32 op, temp, tempPC;
+		
+		long PC = 256;
+
+		mask = "11111100000000000000000000000000";
+
+		//cout << "Data Offset = " << data_offset << endl;
+		//cout << "END_OF_INSTR = " << END_OF_INSTR <<  endl;
+		
+		
+
+		for(int i=0;i< END_OF_INSTR;i++){
+			PC = 256 + i*4;
+			op = memory[i] & mask;
+
+			if(op == opCodes.J){
+				instr_decoded *insd = new instr_decoded;
+
+				instr32 mask4("11110000000000000000000000000000");
+				instr32 mask26("00000011111111111111111111111111");
+
+				temp = memory[i] & mask26;
+				temp = temp << 2;
+				//cout << (long)PC + 4 << endl;;
+				tempPC = (long)PC + 4;
+				tempPC = tempPC & mask4;
+				temp = temp | tempPC;
+				
+				insd->ins.copy(opCodes.J);
+				insd->signed_offset = temp.toNum();				
 
 			}else if(op == opCodes.JR){
 				instr32 maskrs("00000011111000000000000000000000");
@@ -694,33 +1216,7 @@ class Dissassembler{
 
 			}
 		}
-		
-	}
 
-	void disassemble_data(){
-		long num, PC;
-		instr32 temp;
-		int END_OF_INSTR = (data_offset-256)/4;
-
-		//cout << code_size << endl;
-		//cout << data_offset << endl;
-
-		for(int i = END_OF_INSTR;i<code_size;i++){
-			PC = 256 + i*4;
-			temp.copy(memory[i]);
-
-			if(temp.bits[0] == 1){
-				temp = ~ temp;
-				temp = temp + instr32("00000000000000000000000000000001");
-				num = -temp.toNum();
-			}else{
-				num = temp.toNum();
-			}
-
-			memory[i].print();
-			cout << "\t" << PC << "\t" ;
-			cout << num << endl;
-		}
 	}
 
 };
@@ -735,7 +1231,24 @@ int main(){
 	dis.file2memory("sample.txt");
 	dis.disassemble_instructions();
 	dis.disassemble_data();
+	cout << "--------------------------------------------------------" << endl;
+	instr32 ins = dis.make_mask(1,4,instr32("10101010101010101010101010101010"));
+	ins.print();	cout << endl;
 
-	
+	ins = dis.num_2_twos_complement(-1);
+	ins.print();	cout << endl;
+
+	cout << dis.twos_complement_2_num(instr32("11111111111111111111111111111111")) << endl;
+
+	instr32 one, two;
+	one = dis.num_2_twos_complement(-1);
+	two = dis.num_2_twos_complement(-3);
+	ins = one + two;
+
+	cout << dis.twos_complement_2_num(ins) << endl;
+
+	dis.print_data();
+	cout << endl << endl;
+	dis.print_regs();
 	return 0;
 }
