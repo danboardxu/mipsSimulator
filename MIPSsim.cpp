@@ -252,7 +252,7 @@ class Dissassembler{
 		int code_size;
 		OPCODES opCodes;
 		ofstream out;
-		vector<instr_decoded> instr;
+		vector<instr_decoded*> instr;
 
 
 	Dissassembler(){
@@ -837,7 +837,7 @@ class Dissassembler{
 
 
 
-	void simulate(){
+	void decoder(){
 
 		getDataOffset();
 		int END_OF_INSTR = (data_offset-256)/4;
@@ -850,16 +850,16 @@ class Dissassembler{
 
 		//cout << "Data Offset = " << data_offset << endl;
 		//cout << "END_OF_INSTR = " << END_OF_INSTR <<  endl;
-		
+		instr_decoded *insd;
 		
 
 		for(int i=0;i< END_OF_INSTR;i++){
+			insd = new instr_decoded;
 			PC = 256 + i*4;
 			op = memory[i] & mask;
 
 			if(op == opCodes.J){
-				instr_decoded *insd = new instr_decoded;
-
+				 
 				instr32 mask4("11110000000000000000000000000000");
 				instr32 mask26("00000011111111111111111111111111");
 
@@ -871,18 +871,27 @@ class Dissassembler{
 				temp = temp | tempPC;
 				
 				insd->ins.copy(opCodes.J);
-				insd->signed_offset = temp.toNum();				
+				insd->signed_offset = temp.toNum();
+
+				instr.push_back(insd);
+				
+
 
 			}else if(op == opCodes.JR){
+				
 				instr32 maskrs("00000011111000000000000000000000");
 
 				temp = memory[i] & maskrs;
 				temp = temp >> 21;
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << 'JR R' << temp.toNum() << endl;
+				
+				insd->ins.copy(opCodes.JR);
+				insd->rs = temp.toNum();
+
+				instr.push_back(insd);
+				
 
 			}else if(op == opCodes.BEQ){
+				
 				instr32 mask16("00000000000000001111111111111111");
 				long offset;
 				long rs_val,rt_val;
@@ -903,11 +912,17 @@ class Dissassembler{
 					offset = temp.toNum();
 
 				}
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "BEQ R" << rs_val <<", R" << rt_val <<", #" << offset << endl;
+
+				insd->ins.copy(opCodes.BEQ);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->signed_offset = offset;
+
+				instr.push_back(insd);
+				
 
 			}else if(op == opCodes.BLTZ){
+				
 				instr32 mask16("00000000000000001111111111111111");
 				long offset;
 				long rs_val;
@@ -927,11 +942,16 @@ class Dissassembler{
 					offset = temp.toNum();
 
 				}
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "BLTZ R" << rs_val <<", #" << offset << endl;
+
+				insd->ins.copy(opCodes.BLTZ);
+				insd->rs = rs_val;
+				insd->signed_offset = offset;
+
+				instr.push_back(insd);
+				
 
 			}else if(op == opCodes.BGTZ){
+				
 				instr32 mask16("00000000000000001111111111111111");
 				long offset;
 				long rs_val;
@@ -951,14 +971,20 @@ class Dissassembler{
 					offset = temp.toNum();
 
 				}
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "BGTZ R" << rs_val <<", #" << offset << endl;
+
+				insd->ins.copy(opCodes.BGTZ);
+				insd->rs = rs_val;
+				insd->signed_offset = offset;
+
+				instr.push_back(insd);
+				
 
 			}else if(op == opCodes.BREAK){
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "BREAK" << endl;
+				
+				insd->ins.copy(opCodes.BREAK);
+
+				instr.push_back(insd);
+				
 				break;
 
 			}else if(op == opCodes.SW){
@@ -979,9 +1005,13 @@ class Dissassembler{
 
 				}
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "SW R" << rt_val <<", " << offset << "(R" << rs_val << ")" << endl;
+				insd->ins.copy(opCodes.SW);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->signed_offset = offset;
+
+				instr.push_back(insd);
+
 
 			}else if(op == opCodes.LW){
 				instr32 mask16("00000000000000001111111111111111");
@@ -1001,33 +1031,42 @@ class Dissassembler{
 
 				}
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "LW R" << rt_val <<", " << offset << "(R" << rs_val << ")" << endl;
+				insd->ins.copy(opCodes.LW);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->signed_offset = offset;
+
+				instr.push_back(insd);
 
 			}else if(op == opCodes.SLL){
 				instr32 mask16("00000000000000001111111111111111");
-				long offset;
+		
 				long rd_val,rt_val,sa_val;
 				rd_val = rd(memory[i]);
 				rt_val = rt(memory[i]);
 				sa_val = sa(memory[i]);
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "SLL R" << rd_val <<", R" << rt_val << ", #" << sa_val << endl;
+				insd->ins.copy(opCodes.SLL);
+				insd->rd = rd_val;
+				insd->rt = rt_val;
+				insd->sa = sa_val;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.SRL){
 				instr32 mask16("00000000000000001111111111111111");
-				long offset;
+				
 				long rd_val,rt_val,sa_val;
 				rd_val = rd(memory[i]);
 				rt_val = rt(memory[i]);
 				sa_val = sa(memory[i]);
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "SRL R" << rd_val <<", R" << rt_val << ", #" << sa_val << endl;
+				insd->ins.copy(opCodes.SRL);
+				insd->rd = rd_val;
+				insd->rt = rt_val;
+				insd->sa = sa_val;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.SRA){
 				instr32 mask16("00000000000000001111111111111111");
@@ -1037,14 +1076,21 @@ class Dissassembler{
 				rt_val = rt(memory[i]);
 				sa_val = sa(memory[i]);
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "SRA R" << rd_val <<", R" << rt_val << ", #" << sa_val << endl;
+				insd->ins.copy(opCodes.SRA);
+				insd->rd = rd_val;
+				insd->rt = rt_val;
+				insd->sa = sa_val;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.NOP){
 				memory[i].print();
 				cout << "\t" << PC << "\t" ;
 				cout << "NOP" << endl;
+
+				insd->ins.copy(opCodes.NOP);
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.ADD){
 				long rd_val,rt_val,rs_val;
@@ -1052,9 +1098,12 @@ class Dissassembler{
 				rt_val = rt(memory[i]);
 				rs_val = rs(memory[i]);
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "ADD R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+				insd->ins.copy(opCodes.ADD);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->rd = rd_val;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.SUB){
 				long rd_val,rt_val,rs_val;
@@ -1062,9 +1111,12 @@ class Dissassembler{
 				rt_val = rt(memory[i]);
 				rs_val = rs(memory[i]);
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "SUB R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+				insd->ins.copy(opCodes.SUB);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->rd = rd_val;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.MUL){
 				long rd_val,rt_val,rs_val;
@@ -1072,9 +1124,12 @@ class Dissassembler{
 				rt_val = rt(memory[i]);
 				rs_val = rs(memory[i]);
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "MUL R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+				insd->ins.copy(opCodes.MUL);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->rd = rd_val;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.AND){
 				long rd_val,rt_val,rs_val;
@@ -1082,9 +1137,12 @@ class Dissassembler{
 				rt_val = rt(memory[i]);
 				rs_val = rs(memory[i]);
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "AND R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+				insd->ins.copy(opCodes.AND);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->rd = rd_val;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.OR){
 				long rd_val,rt_val,rs_val;
@@ -1092,9 +1150,12 @@ class Dissassembler{
 				rt_val = rt(memory[i]);
 				rs_val = rs(memory[i]);
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "OR R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+				insd->ins.copy(opCodes.OR);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->rd = rd_val;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.XOR){
 				long rd_val,rt_val,rs_val;
@@ -1102,9 +1163,12 @@ class Dissassembler{
 				rt_val = rt(memory[i]);
 				rs_val = rs(memory[i]);
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "XOR R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+				insd->ins.copy(opCodes.XOR);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->rd = rd_val;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.NOR){
 				long rd_val,rt_val,rs_val;
@@ -1112,9 +1176,12 @@ class Dissassembler{
 				rt_val = rt(memory[i]);
 				rs_val = rs(memory[i]);
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "NOR R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+				insd->ins.copy(opCodes.NOR);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->rd = rd_val;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.SLT){
 				long rd_val,rt_val,rs_val;
@@ -1122,9 +1189,12 @@ class Dissassembler{
 				rt_val = rt(memory[i]);
 				rs_val = rs(memory[i]);
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "SLT R" << rd_val <<", R" << rs_val << ", R" << rt_val << endl;
+				insd->ins.copy(opCodes.SLT);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->rd = rd_val;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.ADDI){
 				instr32 mask16("00000000000000001111111111111111");
@@ -1144,9 +1214,12 @@ class Dissassembler{
 
 				}
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "ADDI R" << rt_val <<", R" << rs_val << ", #" << offset << endl;
+				insd->ins.copy(opCodes.ADDI);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->signed_offset = offset;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.ANDI){
 				instr32 mask16("00000000000000001111111111111111");
@@ -1166,9 +1239,12 @@ class Dissassembler{
 
 				}
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "ANDI R" << rt_val <<", R" << rs_val << ", #" << offset << endl;
+				insd->ins.copy(opCodes.ANDI);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->signed_offset = offset;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.ORI){
 				instr32 mask16("00000000000000001111111111111111");
@@ -1188,9 +1264,12 @@ class Dissassembler{
 
 				}
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "ORI R" << rt_val <<", R" << rs_val << ", #" << offset << endl;
+				insd->ins.copy(opCodes.ORI);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->signed_offset = offset;
+				
+				instr.push_back(insd);
 
 			}else if(op == opCodes.XORI){
 				instr32 mask16("00000000000000001111111111111111");
@@ -1210,12 +1289,21 @@ class Dissassembler{
 
 				}
 
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "XORI R" << rt_val <<", R" << rs_val << ", #" << offset << endl;
+				insd->ins.copy(opCodes.XORI);
+				insd->rs = rs_val;
+				insd->rt = rt_val;
+				insd->signed_offset = offset;
+				
+				instr.push_back(insd);
 
 			}
+
+			insd = NULL;
 		}
+
+	}
+
+	void simulate(){
 
 	}
 
@@ -1231,6 +1319,9 @@ int main(){
 	dis.file2memory("sample.txt");
 	dis.disassemble_instructions();
 	dis.disassemble_data();
+	dis.decoder();
+
+	/*
 	cout << "--------------------------------------------------------" << endl;
 	instr32 ins = dis.make_mask(1,4,instr32("10101010101010101010101010101010"));
 	ins.print();	cout << endl;
@@ -1250,5 +1341,6 @@ int main(){
 	dis.print_data();
 	cout << endl << endl;
 	dis.print_regs();
+	*/
 	return 0;
 }
