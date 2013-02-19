@@ -7,6 +7,8 @@
 using namespace std;
 
 #define MEM 256
+#define AUTHOR "Vikrant Sagar"
+#define COURSE "Computer Architecture"
 
 class instr32{
 	public:
