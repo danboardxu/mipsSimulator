@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <sstream>
 
 using namespace std;
 
@@ -290,7 +291,7 @@ class Dissassembler{
 		int instr_offset;
 		int code_size;
 		OPCODES opCodes;
-		ofstream out;
+		ofstream out,out2;
 		vector<instr_decoded*> instr;
 		map<int,string> m2c;
 		string FILE_NAME;
@@ -305,6 +306,8 @@ class Dissassembler{
 		}
 
 		out.open("dis.txt");
+		out2.open("sim.txt");
+
 	}
 
 	void print_instr32(instr32 mem){
@@ -832,7 +835,7 @@ class Dissassembler{
 	void print_eight_data(int index){
 
 		for(int i=index;i<index+8;i++){
-			cout << "\t" << twos_complement_2_num(memory[i]);
+			out2 << "\t" << twos_complement_2_num(memory[i]);
 		}
 
 	}
@@ -841,14 +844,14 @@ class Dissassembler{
 		int END_OF_INSTR = (data_offset-256)/4;
 		int count = 1;
 		int offset = data_offset;
-		cout << "Data" << endl;
+		out2 << "Data" << endl;
 
 		for(int i=END_OF_INSTR;i<code_size;i++){
-			cout << offset << ":";
+			out2 << offset << ":";
 			print_eight_data(i);
 			i = i + 7;
 			offset =  (i+1)*4 + 252 + 4;
-			cout << endl;
+			out2 << endl;
 
 		}
 
@@ -857,7 +860,7 @@ class Dissassembler{
 	void print_eight_regs(int index){
 
 		for(int i=index;i<index+8;i++){
-			cout << "\t" << twos_complement_2_num(R[i]);
+			out2 << "\t" << twos_complement_2_num(R[i]);
 		}
 
 	}
@@ -870,13 +873,13 @@ class Dissassembler{
 	}
 
 	void print_regs(){
-		cout << "Registers" << endl;
+		out2 << "Registers" << endl;
 
 		for(int i=0;i<32;i++){
-			cout << "R" << pad_digit(i) << i << ":";
+			out2 << "R" << pad_digit(i) << i << ":";
 			print_eight_regs(i);
 			i = i + 7;
-			cout << endl;
+			out2 << endl;
 
 		}
 	}
@@ -1349,6 +1352,22 @@ class Dissassembler{
 
 	}
 
+	string format(string str){
+		stringstream ss;
+		string new_str;
+		bool flag = 0;
+		for ( std::string::iterator it=str.begin(); it!=str.end(); ++it){
+			if(*it == ' ' && flag == 0){
+				ss << "\t";
+				flag = 1;
+			}else{
+				ss << *it;
+			}
+		}
+		new_str = ss.str();
+		return new_str;
+	}
+
 
 
 
@@ -1362,6 +1381,7 @@ class Dissassembler{
 		int cycle = 0;
 
 		bool BREAK = 0;
+		
 
 		while(1){
 
@@ -1504,18 +1524,21 @@ class Dissassembler{
 
 			
 			
-			cout << "--------------------" << endl;
-			cout << "Cycle:" << cycle << m2c[PC_REC].substr(32) << endl << endl;
+			out2 << "--------------------" << endl;
+
+			out2 << "Cycle:" << cycle << format(m2c[PC_REC].substr(32)) << endl << endl;
 			print_regs();
-			cout << endl;
+			out2 << endl;
 			print_data();
-			cout << endl;
+			out2 << endl;
 
 			PC = PC + 4;
 			if(BREAK)
 				break;
 
 		}
+
+		out2.close();
 
 	}
 
