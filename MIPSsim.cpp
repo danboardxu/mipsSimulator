@@ -49,17 +49,45 @@ class instr32{
 
 		}
 
+		instr32 num_2_twos_complement(long num){
+			instr32 temp;
+			if(num < 0){
+				temp = num;
+				temp = ~temp;
+				temp = temp + instr32("00000000000000000000000000000001");
+				return temp;
+
+			}else{
+				temp = num;
+				return temp;
+			}
+		}
+
 		void operator=(long num){
+
 			instr32 ins;
+
 			copy(ins);
 			int i = 31;
-			//cout << num << endl;
-			while(num || i < 0){
-				bits[i] = (bool)num % 2;
-				num = num / 2;
-				//cout << "num = " << num << endl;
-				i--;
+
+			for(int i=31;i>=0;i--){
+				if(num){
+					if(num % 2 == 1)
+						bits[i] = 1;
+					else
+						bits[i] = 0;
+
+					num = num / 2;
+					//cout << "num = " << num << endl;
+					
+				}
 			}
+			/*
+			for(int i=0;i< 32;i++){
+				cout << bits[i] ;
+			}
+			cout << endl;
+			*/
 
 		}
 
@@ -73,6 +101,15 @@ class instr32{
 			instr32 ins;
 			for(int i=0;i< 32;i++){
 				ins.bits[i] = bits[i] & right.bits[i];
+			}
+
+			return ins;
+		}
+
+		instr32 operator^(instr32 right){
+			instr32 ins;
+			for(int i=0;i< 32;i++){
+				ins.bits[i] = bits[i] ^ right.bits[i];
 			}
 
 			return ins;
@@ -253,6 +290,8 @@ class Dissassembler{
 		OPCODES opCodes;
 		ofstream out;
 		vector<instr_decoded*> instr;
+		map<int,string> m2c;
+		string FILE_NAME;
 
 
 	Dissassembler(){
@@ -274,6 +313,7 @@ class Dissassembler{
 		}
 
 	void file2memory(string file){
+		FILE_NAME = file;
 		string line;
   		ifstream myfile;
   		myfile.open((char*)file.c_str());
@@ -771,7 +811,12 @@ class Dissassembler{
 	instr32 num_2_twos_complement(long num){
 		instr32 temp;
 		if(num < 0){
-			temp = (-num);
+			num = 0 - num;
+			//cout << num << endl;
+			temp = num;
+			//temp.print();
+			//cout << endl;
+			temp = num;
 			temp = ~temp;
 			temp = temp + instr32("00000000000000000000000000000001");
 			return temp;
@@ -874,7 +919,6 @@ class Dissassembler{
 				insd->signed_offset = temp.toNum();
 
 				instr.push_back(insd);
-				
 
 
 			}else if(op == opCodes.JR){
@@ -1304,64 +1348,79 @@ class Dissassembler{
 	}
 
 
+
+
 	void simulate(){
 		int index = 0;
 		int PC = 256;
+		int PC_REC;
 		instr_decoded *ptr;
 		bool jump = 0;
 		long jump_add = 0;
 		int cycle = 0;
 
+		bool BREAK = 0;
+
 		while(1){
+
 			++cycle;
 			index = (PC - 256)/4;
 			ptr = instr[index];
+			PC_REC = PC;
+
+			//cout << endl ;
+			//ptr->ins.print();
+			//cout << endl;
+			//cout << "PC = " << PC << endl;
 			if(ptr->ins == opCodes.J){
-				PC = ptr->signed_offset;
-				continue;
+				PC = ptr->signed_offset - 4;
 
 			}else if(ptr->ins == opCodes.JR){
-				PC = twos_complement_2_num(R[ptr->rs]);
-				continue;
+				PC = twos_complement_2_num(R[ptr->rs]) - 4;
+				
 
 			}else if(ptr->ins == opCodes.BEQ){
 				long rs_val = twos_complement_2_num(R[ptr->rs]);
 				long rt_val = twos_complement_2_num(R[ptr->rt]);
 
 				if(rs_val == rt_val){
-					PC = PC + 4 + ptr->signed_offset;
-					continue;
+					PC = PC + 4 + ptr->signed_offset - 4;
+					
 				}
 
 			}else if(ptr->ins == opCodes.BLTZ){
 				long rs_val = twos_complement_2_num(R[ptr->rs]);
 
 				if(rs_val < 0){
-					PC = PC + 4 + ptr->signed_offset;
-					continue;
+					PC = PC + 4 + ptr->signed_offset - 4;
+					
 				}
 
 			}else if(ptr->ins == opCodes.BGTZ){
 				long rs_val = twos_complement_2_num(R[ptr->rs]);
 
 				if(rs_val > 0){
-					PC = PC + 4 + ptr->signed_offset;
-					continue;
+					PC = PC + 4 + ptr->signed_offset - 4;
+					
 				}
 
 			}else if(ptr->ins == opCodes.BREAK){
 
-				break;
+				BREAK = 1;
 
 			}else if(ptr->ins == opCodes.SW){
 				long rs_val = twos_complement_2_num(R[ptr->rs]);
 				
-				memory[rs_val + ptr->signed_offset] = R[ptr->rt];
+				memory[((rs_val + ptr->signed_offset) - 256)/4] = R[ptr->rt];
 
 			}else if(ptr->ins == opCodes.LW){
 				long rs_val = twos_complement_2_num(R[ptr->rs]);
-				
-				R[ptr->rt] = memory[rs_val + ptr->signed_offset];
+			
+				R[ptr->rt] = memory[((rs_val + ptr->signed_offset) - 256)/4];
+				//memory[rs_val + ptr->signed_offset].print();
+				//cout << endl;
+				//R[ptr->rt].print();
+				//cout << endl;
 
 			}else if(ptr->ins == opCodes.SLL){
 				R[ptr->rd] = R[ptr->rt] << ptr->sa; 
@@ -1372,37 +1431,112 @@ class Dissassembler{
 			}else if(ptr->ins == opCodes.SRA){
 
 			}else if(ptr->ins == opCodes.NOP){
-				PC = PC +4;
-				continue;
+				PC = PC + 4 - 4;
 
 			}else if(ptr->ins == opCodes.ADD){
+				R[ptr->rd] = R[ptr->rs] + R[ptr->rt];
 
 			}else if(ptr->ins == opCodes.SUB){
+				long rs_val = twos_complement_2_num(R[ptr->rs]);
+				long rt_val = twos_complement_2_num(R[ptr->rt]);
+
+				R[ptr->rd] = num_2_twos_complement(rs_val - rt_val);
 
 			}else if(ptr->ins == opCodes.MUL){
+				long rs_val = twos_complement_2_num(R[ptr->rs]);
+				long rt_val = twos_complement_2_num(R[ptr->rt]);
+
+				//cout << rs_val << endl;
+				//cout << rt_val << endl;
+
+
+				R[ptr->rd] = num_2_twos_complement(rs_val * rt_val);
+				//R[ptr->rd].print();
+				//cout << endl;
 
 			}else if(ptr->ins == opCodes.AND){
+				R[ptr->rd] = R[ptr->rs] & R[ptr->rt];
 
 			}else if(ptr->ins == opCodes.OR){
+				R[ptr->rd] = R[ptr->rs] | R[ptr->rt];
 
 			}else if(ptr->ins == opCodes.XOR){
+				R[ptr->rd] = R[ptr->rs] ^ R[ptr->rt];
 
 			}else if(ptr->ins == opCodes.NOR){
+				R[ptr->rd] = ~(R[ptr->rs] | R[ptr->rt]);
 
 			}else if(ptr->ins == opCodes.SLT){
+				long rs_val = twos_complement_2_num(R[ptr->rs]);
+				long rt_val = twos_complement_2_num(R[ptr->rt]);
+
+				if(rs_val < rt_val){
+					R[ptr->rd] = 1;
+				}
 
 			}else if(ptr->ins == opCodes.ADDI){
+				long rs_val = twos_complement_2_num(R[ptr->rs]);
+				long rt_val = twos_complement_2_num(R[ptr->rt]);
+
+				R[ptr->rt] = R[ptr->rs] + num_2_twos_complement(ptr->signed_offset);
 
 			}else if(ptr->ins == opCodes.ANDI){
+				long rs_val = twos_complement_2_num(R[ptr->rs]);
+				long rt_val = twos_complement_2_num(R[ptr->rt]);
+
+				R[ptr->rt] = R[ptr->rs] & num_2_twos_complement(ptr->signed_offset);
 
 			}else if(ptr->ins == opCodes.ORI){
+				long rs_val = twos_complement_2_num(R[ptr->rs]);
+				long rt_val = twos_complement_2_num(R[ptr->rt]);
+
+				R[ptr->rt] = R[ptr->rs] | num_2_twos_complement(ptr->signed_offset);
 
 			}else if(ptr->ins == opCodes.XORI){
+				long rs_val = twos_complement_2_num(R[ptr->rs]);
+				long rt_val = twos_complement_2_num(R[ptr->rt]);
+
+				R[ptr->rt] = R[ptr->rs] ^ num_2_twos_complement(ptr->signed_offset);
 
 			}
 
+			
+			
+			cout << "--------------------" << endl;
+			cout << "Cycle:" << cycle << m2c[PC_REC].substr(32) << endl << endl;
+			print_regs();
+			cout << endl;
+			print_data();
+			cout << endl;
+
+			PC = PC + 4;
+			if(BREAK)
+				break;
+
 		}
 
+	}
+
+	void test(){
+
+		
+	}
+
+	void create_map(){
+		string line;
+  		ifstream myfile;
+  		myfile.open("dis.txt");
+  		int PC = 256;
+  		int i = 0;
+    	while ( i < code_size ){
+
+      		getline (myfile,line);
+      		
+      		m2c.insert ( pair<int,string>(PC + i*4,line) );
+
+      		i++;
+    	}
+    	myfile.close();
 	}
 
 };
@@ -1418,6 +1552,11 @@ int main(){
 	dis.disassemble_instructions();
 	dis.disassemble_data();
 	dis.decoder();
+	dis.create_map();
+	dis.simulate();
+
+	
+
 
 	/*
 	cout << "--------------------------------------------------------" << endl;
