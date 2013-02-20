@@ -4,4 +4,3 @@ Mips simulator + assembler + disaasembler for incomplete instructions
 	make mips
 
 <h3> TO DO </h3>
-	- SRA left
