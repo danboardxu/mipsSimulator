@@ -1,3 +1,5 @@
+//
+
 #include <string>
 #include <map>
 #include <iostream>
@@ -167,6 +169,19 @@ class instr32{
 
 			return ins;
 		}
+		
+		instr32 SRA(instr32 ins,long shift){
+			bool flag = 0;
+			instr32 temp;
+			if(bits[0] == 1)
+				flag = 1;
+			temp = ins >> shift;
+			if(flag)
+				for(int i=0;i < shift ; i++)
+					temp.bits[i] = 1;
+
+			return temp; 
+		}
 
 		long toNum(){
 			long num = 0;
@@ -305,8 +320,8 @@ class Dissassembler{
 			R[i] = 0;
 		}
 
-		out.open("dis.txt");
-		out2.open("sim.txt");
+		out.open("generated_disassemble.txt");
+		out2.open("generated_simulate.txt");
 
 	}
 
@@ -317,11 +332,11 @@ class Dissassembler{
 			//cout << endl;
 		}
 
-	void file2memory(string file){
+	void file2memory(char* file){
 		FILE_NAME = file;
 		string line;
   		ifstream myfile;
-  		myfile.open((char*)file.c_str());
+  		myfile.open(file);
   		int i = 0;
     	while ( myfile.good() ){
 
@@ -1451,6 +1466,7 @@ class Dissassembler{
 				R[ptr->rd] = R[ptr->rt] >> ptr->sa; 
 
 			}else if(ptr->ins == opCodes.SRA){
+				R[ptr->rd] = R[ptr->rt].SRA(R[ptr->rt],ptr->sa);
 
 			}else if(ptr->ins == opCodes.NOP){
 				PC = PC + 4 - 4;
@@ -1569,17 +1585,19 @@ class Dissassembler{
 
 
 
-int main(){
+int main(int argc, char* argv[]){
 
-	
-	Dissassembler dis;
-	dis.file2memory("sample.txt");
-	dis.disassemble_instructions();
-	dis.disassemble_data();
-	dis.decoder();
-	dis.create_map();
-	dis.simulate();
-
+	if(argc < 2){
+		cout << "Usage: ./MIPSsim <file>" << endl;
+	}else{
+		Dissassembler dis;
+		dis.file2memory(argv[1]);
+		dis.disassemble_instructions();
+		dis.disassemble_data();
+		dis.decoder();
+		dis.create_map();
+		dis.simulate();
+	}
 	
 
 
@@ -1603,6 +1621,11 @@ int main(){
 	dis.print_data();
 	cout << endl << endl;
 	dis.print_regs();
+	
+	instr32 ins("00001111111111111111111111111111");
+	ins = ins.SRA(ins,3);
+	ins.print();
+	cout << endl;
 	*/
 	return 0;
 }
