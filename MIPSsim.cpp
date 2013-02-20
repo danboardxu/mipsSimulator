@@ -1,4 +1,4 @@
-//
+//“On my honor, I have neither given nor received unauthorized aid on this assignment”
 
 #include <string>
 #include <map>
@@ -12,16 +12,19 @@ using namespace std;
 #define MEM 256
 #define AUTHOR "Vikrant Sagar"
 #define COURSE "Computer Architecture"
+#define PROJECT "Project 1"
 
+//class to hold 32 bit data structure and functions operated on it
 class instr32{
 	public:
-		bool bits[32];
+		bool bits[32];	//32 bit bool array to hold 32 bit number
 
 		instr32(){
 			for(int i=0;i<32;i++)
 				bits[i] = 0;
 		}
 
+		//constructor to convert 32 char binary string to 32 bit bool array
 		instr32(string str){
 			int i = 0;
 			for ( std::string::iterator it=str.begin(); it!=str.end(); ++it){
@@ -33,14 +36,16 @@ class instr32{
 				i++;
 			}
 		}
-
+		
+		//function to print the bool array as on the screen
 		void print(){
 			for(int i=0;i< 32;i++){
 				cout << bits[i];
 			}
 			//cout << endl;
 		}
-
+		
+		//operator overloading to assign 32 char string to 32 bit bool array 
 		void operator=(string str){
 			int i = 0;
 			for ( std::string::iterator it=str.begin(); it!=str.end(); ++it){
@@ -54,6 +59,7 @@ class instr32{
 
 		}
 
+		//function to convert instr32 data structure to long num
 		instr32 num_2_twos_complement(long num){
 			instr32 temp;
 			if(num < 0){
@@ -67,7 +73,8 @@ class instr32{
 				return temp;
 			}
 		}
-
+		
+		//operator overloading to assign number to 32 bit bool array
 		void operator=(long num){
 
 			instr32 ins;
@@ -96,12 +103,14 @@ class instr32{
 
 		}
 
+		//function to copy instr32 data structure to current object
 		void copy(instr32 ins){
 			for(int i=0;i< 32;i++){
 				bits[i] = ins.bits[i];
 			}
 		}
 
+		//operator overloading to do logical AND on the two instr32 type objects
 		instr32 operator&(instr32 right){
 			instr32 ins;
 			for(int i=0;i< 32;i++){
@@ -111,6 +120,7 @@ class instr32{
 			return ins;
 		}
 
+		//operator overloading to do logical XOR on the two instr32 type objects
 		instr32 operator^(instr32 right){
 			instr32 ins;
 			for(int i=0;i< 32;i++){
@@ -120,7 +130,7 @@ class instr32{
 			return ins;
 		}
 
-
+		//operator overloading to do logical OR on the two instr32 type objects
 		instr32 operator|(instr32 right){
 			instr32 ins;
 			for(int i=0;i< 32;i++){
@@ -130,6 +140,7 @@ class instr32{
 			return ins;
 		}
 
+		//operator overloading to do logical RIGHT SHIFT on instr32 type objects
 		instr32 operator>>(int shift){
 			instr32 ins;
 
@@ -149,7 +160,8 @@ class instr32{
 
 			return ins;
 		}
-
+		
+		//operator overloading to do logical LEFT SHIFT on instr32 type objects
 		instr32 operator<<(int shift){
 			instr32 ins;
 
@@ -170,6 +182,7 @@ class instr32{
 			return ins;
 		}
 		
+		//operator overloading to do arthmatic RIGHT SHIFT on instr32 type objects
 		instr32 SRA(instr32 ins,long shift){
 			bool flag = 0;
 			instr32 temp;
@@ -183,6 +196,7 @@ class instr32{
 			return temp; 
 		}
 
+		//function to convert current object to long number
 		long toNum(){
 			long num = 0;
 			long mul = 1;
@@ -198,6 +212,7 @@ class instr32{
 
 		}
 
+		//operator overloading to compare two instr32 object
 		bool operator==(instr32 right){
 			for(int i=0;i< 32;i++){
 				if(bits[i] != right.bits[i])
@@ -215,6 +230,7 @@ class instr32{
 			return ins;
 		}
 
+		//function to add to bit
 		bool add(bool a,bool b){
 
 			if(a == b)
@@ -224,6 +240,7 @@ class instr32{
 
 		}
 
+		//operator overloading to do bitwuse ADD operation on two instr32 type objects
 		instr32 operator+(instr32 right){
 			bool carry = 0,carry1,carry2;
 			bool ans;
@@ -245,7 +262,7 @@ class instr32{
 		}
 };
 
-
+//class to hold opcodes 
 class OPCODES{
 public:
 		instr32 J,JR,BEQ,BLTZ,BGTZ,BREAK,SW,LW,SLL,SRL,SRA,NOP,ADD,SUB,MUL,AND,OR,XOR,NOR,SLT,ADDI,ANDI,ORI,XORI;
@@ -282,6 +299,7 @@ public:
 };
 
 
+//class to hold each instruction data 
 class instr_decoded{
 
 public:
@@ -296,12 +314,12 @@ public:
 
 
 
-
+//class to disassemble the input file
 class Dissassembler{
 
 	public:
-		instr32 R[32];
-		instr32 memory[MEM];
+		instr32 R[32];	//32 registers
+		instr32 memory[MEM];	//total memory
 		int data_offset;
 		int instr_offset;
 		int code_size;
@@ -320,7 +338,7 @@ class Dissassembler{
 			R[i] = 0;
 		}
 
-		out.open("generated_disassemble.txt");
+		out.open("generated_disassembly.txt");
 		out2.open("generated_simulate.txt");
 
 	}
@@ -331,7 +349,7 @@ class Dissassembler{
 			}
 			//cout << endl;
 		}
-
+	//read data from file and store it in memory
 	void file2memory(char* file){
 		FILE_NAME = file;
 		string line;
@@ -349,6 +367,7 @@ class Dissassembler{
   		code_size = i;
 	}
 
+	//find where data segment starts
 	void getDataOffset(){
 		instr32 mask;
 		mask = "11111100000000000000000000000000";
@@ -361,6 +380,7 @@ class Dissassembler{
 		data_offset = (i+1)*4 + 252 + 4;
 	}
 
+	//to extract rs value fron instr32 object
 	long rs(instr32 ins){
 		instr32 temp;
 		temp.copy(ins);
@@ -370,7 +390,8 @@ class Dissassembler{
 		temp = temp >> 21;
 		return temp.toNum(); 
 	}
-
+	
+	//to extract rt value fron instr32 object
 	long rt(instr32 ins){
 		instr32 temp;
 		temp.copy(ins);
@@ -381,6 +402,7 @@ class Dissassembler{
 		return temp.toNum(); 
 	}
 
+	//to extract rd value fron instr32 object
 	long rd(instr32 ins){
 		instr32 temp;
 		temp.copy(ins);
@@ -391,6 +413,7 @@ class Dissassembler{
 		return temp.toNum(); 
 	}
 
+	//to extract sa value fron instr32 object
 	long sa(instr32 ins){
 		instr32 temp;
 		temp.copy(ins);
@@ -401,6 +424,7 @@ class Dissassembler{
 		return temp.toNum(); 
 	}
 
+	//function to disaasemble the machine code to assembly codes
 	void disassemble_instructions(){
 		getDataOffset();
 		int END_OF_INSTR = (data_offset-256)/4;
@@ -415,7 +439,7 @@ class Dissassembler{
 		//cout << "END_OF_INSTR = " << END_OF_INSTR <<  endl;
 		
 		
-
+		//loop to iterate over all instructions
 		for(int i=0;i< END_OF_INSTR;i++){
 			PC = 256 + i*4;
 			op = memory[i] & mask;
@@ -779,7 +803,8 @@ class Dissassembler{
 		}
 		
 	}
-
+	
+	//disassemble data segment to numbers
 	void disassemble_data(){
 		long num, PC;
 		instr32 temp;
@@ -808,13 +833,15 @@ class Dissassembler{
 		out.close();
 	}
 
+	//function to create mask from instr32 object
 	instr32 make_mask(int start,int end,instr32 ins){
 		instr32 temp;
 		for(int i=start;i<=end;i++)
 			temp.bits[i] = 1;
 		return temp;
 	}
-
+	
+	//function to convert 2' instr32 object to long num
 	long twos_complement_2_num(instr32 ins){
 		instr32 temp;
 		temp.copy(ins);
@@ -828,6 +855,7 @@ class Dissassembler{
 		}
 	}
 
+	//function to convert long num to 2' complement
 	instr32 num_2_twos_complement(long num){
 		instr32 temp;
 		if(num < 0){
@@ -854,7 +882,8 @@ class Dissassembler{
 		}
 
 	}
-
+	
+	//function to print data segment
 	void print_data(){
 		int END_OF_INSTR = (data_offset-256)/4;
 		int count = 1;
@@ -880,6 +909,7 @@ class Dissassembler{
 
 	}
 
+	
 	string pad_digit(int num){
 		if(num > 9)
 			return "";
@@ -887,6 +917,7 @@ class Dissassembler{
 			return "0";
 	}
 
+	//function to print all registers values
 	void print_regs(){
 		out2 << "Registers" << endl;
 
@@ -901,7 +932,7 @@ class Dissassembler{
 
 
 
-
+	//function to get all instructions into instr_decoder object
 	void decoder(){
 
 		getDataOffset();
@@ -1366,7 +1397,8 @@ class Dissassembler{
 		}
 
 	}
-
+	
+	//function to extract opcode from string
 	string format(string str){
 		stringstream ss;
 		string new_str;
@@ -1385,7 +1417,7 @@ class Dissassembler{
 
 
 
-
+	//function to simulate MIPS instructions
 	void simulate(){
 		int index = 0;
 		int PC = 256;
@@ -1558,15 +1590,11 @@ class Dissassembler{
 
 	}
 
-	void test(){
-
-		
-	}
-
+	//function to create memory -> instruction map
 	void create_map(){
 		string line;
   		ifstream myfile;
-  		myfile.open("dis.txt");
+  		myfile.open("generated_disassembly.txt");
   		int PC = 256;
   		int i = 0;
     	while ( i < code_size ){
@@ -1584,7 +1612,7 @@ class Dissassembler{
 
 
 
-
+// main function
 int main(int argc, char* argv[]){
 
 	if(argc < 2){
