@@ -339,7 +339,7 @@ class Dissassembler{
 		}
 
 		out.open("generated_disassembly.txt");
-		out2.open("generated_simulate.txt");
+		out2.open("generated_simulation.txt");
 
 	}
 
