@@ -9,7 +9,7 @@
 
 using namespace std;
 
-#define MEM 256
+#define MEM 1000
 #define AUTHOR "Vikrant Sagar"
 #define COURSE "Computer Architecture"
 #define PROJECT "Project 1"
@@ -359,8 +359,8 @@ class Dissassembler{
     	while ( myfile.good() ){
 
       		getline (myfile,line);
-      		if(line.length() != 32)
-      			break;
+      		//if(line.length() != 32)
+      		//	break;
       		memory[i++] = line;
     	}
     	myfile.close();
@@ -465,7 +465,7 @@ class Dissassembler{
 				temp = temp >> 21;
 				print_instr32(memory[i]);
 				out << "\t" << PC << "\t" ;
-				out << 'JR R' << temp.toNum() << endl;
+				out << "JR R" << temp.toNum() << endl;
 
 			}else if(op == opCodes.BEQ){
 				instr32 mask16("00000000000000001111111111111111");
@@ -1179,9 +1179,9 @@ class Dissassembler{
 				instr.push_back(insd);
 
 			}else if(op == opCodes.NOP){
-				memory[i].print();
-				cout << "\t" << PC << "\t" ;
-				cout << "NOP" << endl;
+				//memory[i].print();
+				//cout << "\t" << PC << "\t" ;
+				//cout << "NOP" << endl;
 
 				insd->ins.copy(opCodes.NOP);
 				
@@ -1622,6 +1622,13 @@ int main(int argc, char* argv[]){
 		dis.file2memory(argv[1]);
 		dis.disassemble_instructions();
 		dis.disassemble_data();
+		dis.R[30] = 340;
+		dis.R[1] = 8;
+		dis.R[2] = dis.num_2_twos_complement(-3);
+		dis.R[8] = dis.num_2_twos_complement(-2);
+		dis.R[5] = dis.num_2_twos_complement(-9);
+		dis.R[6] = dis.num_2_twos_complement(-5);
+		dis.R[9] = dis.num_2_twos_complement(10);
 		dis.decoder();
 		dis.create_map();
 		dis.simulate();
