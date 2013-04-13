@@ -374,8 +374,8 @@ class Dissassembler{
 			R[i] = 0;
 		}
 
-		out.open("generated_disassembly.txt");
-		out2.open("generated_simulation.txt");
+		out.open("disassembly.txt");
+		out2.open("simulation.txt");
 
 		END_OF_INSTR = 0;
 		pre_issue_queue_entries = 0;
@@ -435,14 +435,17 @@ class Dissassembler{
 		}
 	//read data from file and store it in memory
 	void file2memory(char* file){
+		//cout << "File to memory" << endl;
 		FILE_NAME = file;
 		string line;
   		ifstream myfile;
   		myfile.open(file);
   		int i = 0;
     	while ( myfile.good() ){
+    		//cout << "New LIne" << endl;
 
       		getline (myfile,line);
+      		//cout << line << endl;
       		if(!(line.length() > 31))
       			break;
       		memory.push_back(line);
@@ -1740,7 +1743,7 @@ class Dissassembler{
 
 	bool is_branch(instr_decoded *in){
 		instr32 ins = in->ins;
-		if(ins == opCodes.BREAK || ins == opCodes.J || ins == opCodes.JR || ins == opCodes.BEQ || ins == opCodes.BGTZ || ins == opCodes.BLTZ){
+		if(ins == opCodes.NOP || ins == opCodes.BREAK || ins == opCodes.J || ins == opCodes.JR || ins == opCodes.BEQ || ins == opCodes.BGTZ || ins == opCodes.BLTZ){
 			return 1;			
 		}
 
@@ -2245,6 +2248,8 @@ class Dissassembler{
 				PC = convert_PC_to_index(pc);
 			}
 
+		}else if(ptr->ins == opCodes.NOP){
+			PC = convert_PC_to_index(ptr->PC) + 1;
 		}
 	}
 	
@@ -2252,93 +2257,7 @@ class Dissassembler{
 		pre_issue_queue_entries++;
 		pre_issue[pre_issue_queue_entries-1] = ins;
 	}
-	
-	/*
-	void fetch_instr1(){
-		instr_decoded *instr_fetch = instr[PC];
 
-		if(instr_fetch->ins == opCodes.BREAK)
-			cout << "1-BREAK" << endl;
-
-		if(fetch_queue[1] != NULL){
-			if(no_dependancy(instr_fetch)){
-				
-				fetch_queue[0] = instr_fetch;
-				fetch_queue[1] = NULL;
-
-			}
-			return;
-
-		}else if(fetch_queue[0] != NULL){
-				PC++;
-				execute_branch(instr_fetch);		
-		}
-
-
-		if(is_branch(instr_fetch)){
-			if(no_dependancy(instr_fetch)){
-				PC++;
-				fetch_queue[0] = instr_fetch;
-				execute_branch(instr_fetch);
-			}else{
-				
-				fetch_queue[1] = instr_fetch;
-			}
-		}else{
-			if(pre_issue_queue_entries == 4){
-				return;
-			}else{
-				PC++;
-				add_to_pre_issue_queue(instr_fetch);
-			}
-		}
-
-		
-	}
-
-	void fetch_instr(){
-		instr_decoded *instr_fetch = instr[PC];
-		instr_decoded *instr_fetch1 = instr[PC];
-		//cout << PC << endl;
-
-		if(instr_fetch->ins == opCodes.BREAK)
-			cout << "BREAK" << endl;
-
-		if(fetch_queue[1] != NULL){
-			if(no_dependancy(instr_fetch)){
-				fetch_queue[1] = NULL;
-				fetch_queue[0] = fetch_queue[0];
-			}
-			return;
-
-		}else if(fetch_queue[0] != NULL){
-				PC++;
-				instr_fetch = fetch_queue[0];
-				fetch_queue[0] = NULL;
-		}
-
-
-		if(is_branch(instr_fetch)){
-			if(no_dependancy(instr_fetch) && pre_issue_queue_entries != 4){
-				execute_branch(instr_fetch);
-				fetch_queue[0] = NULL;
-			}else{
-				
-				fetch_queue[1] = instr_fetch;
-			}
-		}else{
-			if(pre_issue_queue_entries == 4){
-				return;
-			}else{
-				PC++;
-				add_to_pre_issue_queue(instr_fetch);
-				fetch_instr1();
-			}
-		}
-
-		
-	}
-	*/
 
 	void fetch_instr1(){
 		//cout << "fetch two" << endl;
@@ -2397,6 +2316,7 @@ class Dissassembler{
 		instr_decoded *fetch = instr[PC];		
 
 		if(fetch->ins == opCodes.BREAK){
+
 			execute_branch(fetch);
 			return;
 		}
@@ -2756,11 +2676,13 @@ class Dissassembler{
 			}
 			//cout << "WB data------------------------------------------------------------------" << endl;
 			WB_data();
-			if(!do_not_print)
+			if(!do_not_print){
 				print_all();
+			}
 			
 			if(fetch_queue[0] != NULL && fetch_queue[0]->ins == opCodes.BREAK){
 				do_not_print = 1;
+				
 			}
 			
 
@@ -2791,6 +2713,7 @@ int main(int argc, char* argv[]){
 	}else{
 		Dissassembler dis;
 		dis.file2memory(argv[1]);
+		//cout << "hello" << endl;
 		dis.disassemble_instructions();
 		dis.disassemble_data();
 		//dis.R[30] = 340;
