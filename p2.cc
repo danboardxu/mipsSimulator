@@ -356,6 +356,13 @@ class Dissassembler{
 
 		int CYCLE;
 
+		instr32 zero;
+		int END_OF_INSTR;
+
+		bool EXIT;
+		bool executed;
+		instr_decoded *branch;
+
 
 	Dissassembler(){
 		data_offset = 0;
@@ -368,6 +375,7 @@ class Dissassembler{
 		out.open("generated_disassembly.txt");
 		out2.open("generated_simulation.txt");
 
+		END_OF_INSTR = 0;
 		pre_issue_queue_entries = 0;
 		pre_ALU1_queue_entries = 0;
 		pre_ALU2_queue_entries = 0;
@@ -398,6 +406,20 @@ class Dissassembler{
 			reg_table[i] = 0;
 		}
 
+		for(int i=0;i<32;i++){
+			reg_table1[i] = -1;
+		}
+
+		for(int i=0;i<32;i++){
+			R1[i] = 0;
+		}
+
+		zero = 0;
+		EXIT = 1;
+
+		executed = 0;
+		branch = NULL;
+
 	}
 
 	void print_instr32(instr32 mem){
@@ -419,6 +441,7 @@ class Dissassembler{
       		if(!(line.length() > 31))
       			break;
       		memory.push_back(line);
+      		i++;
     	}
     	myfile.close();
   		code_size = i;
@@ -484,7 +507,7 @@ class Dissassembler{
 	//function to disaasemble the machine code to assembly codes
 	void disassemble_instructions(){
 		getDataOffset();
-		int END_OF_INSTR = (data_offset-256)/4;
+		END_OF_INSTR = (data_offset-256)/4;
 		instr32 mask;
 		instr32 op, temp, tempPC;
 		
@@ -940,8 +963,8 @@ class Dissassembler{
 		instr32 temp;
 		int END_OF_INSTR = (data_offset-256)/4;
 
-		//cout << code_size << endl;
-		//cout << data_offset << endl;
+		//cout << "code_size = " << code_size << endl;
+		//cout << "data_offset" << data_offset << endl;
 
 		for(int i = END_OF_INSTR;i<code_size;i++){
 			PC = 256 + i*4;
@@ -1008,7 +1031,7 @@ class Dissassembler{
 	void print_eight_data(int index){
 
 		for(int i=index;i<index+8;i++){
-			out2 << "\t" << twos_complement_2_num(memory[i]);
+			cout << "\t" << twos_complement_2_num(memory[i]);
 		}
 
 	}
@@ -1018,14 +1041,14 @@ class Dissassembler{
 		int END_OF_INSTR = (data_offset-256)/4;
 		int count = 1;
 		int offset = data_offset;
-		out2 << "Data" << endl;
+		cout << "Data" << endl;
 
 		for(int i=END_OF_INSTR;i<code_size;i++){
-			out2 << offset << ":";
+			cout << offset << ":";
 			print_eight_data(i);
 			i = i + 7;
 			offset =  (i+1)*4 + 252 + 4;
-			out2 << endl;
+			cout << endl;
 
 		}
 
@@ -1034,7 +1057,7 @@ class Dissassembler{
 	void print_eight_regs(int index){
 
 		for(int i=index;i<index+8;i++){
-			out2 << "\t" << twos_complement_2_num(R[i]);
+			cout << "\t" << twos_complement_2_num(R[i]);
 		}
 
 	}
@@ -1049,13 +1072,13 @@ class Dissassembler{
 
 	//function to print all registers values
 	void print_regs(){
-		out2 << "Registers" << endl;
+		cout << "Registers" << endl;
 
 		for(int i=0;i<32;i++){
-			out2 << "R" << pad_digit(i) << i << ":";
+			cout << "R" << pad_digit(i) << i << ":";
 			print_eight_regs(i);
 			i = i + 7;
-			out2 << endl;
+			cout << endl;
 
 		}
 	}
@@ -1215,6 +1238,8 @@ class Dissassembler{
 
 				insd->PC = PC;
 				instr.push_back(insd);
+
+				cout << "BREAk-PC: " << PC << endl;
 				
 				break;
 
@@ -1467,6 +1492,8 @@ class Dissassembler{
 				insd->PC = PC;
 				instr.push_back(insd);
 
+				//cout << "ADDI signed offset = " << instr[i]->signed_offset << endl;
+
 			}else if(op == opCodes.ANDI){
 				instr32 mask16("00000000000000001111111111111111");
 				long offset;
@@ -1658,6 +1685,7 @@ class Dissassembler{
 		if(post_MEM[0] != NULL)
 			s_post_MEM  = "[" + instr_str[convert_PC_to_index(post_MEM[0]->PC)] + "]";
 
+		cout << "--------------------" << endl;
 		cout << "Cycle:" << CYCLE << endl;
 		cout << "IF Unit:" << endl;
 		cout << "\tWaiting Instruction: " << s_fetch_queue[1] << endl;
@@ -1675,19 +1703,25 @@ class Dissassembler{
 
 		cout << "Pre-MEM Queue: " << s_pre_MEM << endl;
 
-		cout << "Pre-MEM Queue: " << s_post_MEM << endl;
+		cout << "Post-MEM Queue: " << s_post_MEM << endl;
 
 		cout << "Pre-ALU2 Queue:" << endl;
 		cout << "\tEntry 0: " << s_pre_ALU2[0] << endl;
 		cout << "\tEntry 1: " << s_pre_ALU2[1] << endl;
 
 		cout << "Post-ALU2 Queue: " << s_post_ALU2 << endl;
+
 		
+		print_regs();
+		cout << endl;
+		print_data();
+		cout << endl;
+
 		CYCLE++;
 	}
 
 	int get_destination_reg(instr_decoded *ins){
-		if(ins->ins == opCodes.ADDI || ins->ins == opCodes.ORI || ins->ins == opCodes.ANDI || ins->ins == opCodes.XORI){
+		if(ins->ins == opCodes.ADDI || ins->ins == opCodes.ORI || ins->ins == opCodes.ANDI || ins->ins == opCodes.XORI || ins->ins == opCodes.LW){
 			return ins->rt;
 		}else{
 			return ins->rd;
@@ -1701,7 +1735,7 @@ class Dissassembler{
 
 	bool is_branch(instr_decoded *in){
 		instr32 ins = in->ins;
-		if(ins == opCodes.J || ins == opCodes.JR || ins == opCodes.BEQ || ins == opCodes.BGTZ || ins == opCodes.BLTZ){
+		if(ins == opCodes.BREAK || ins == opCodes.J || ins == opCodes.JR || ins == opCodes.BEQ || ins == opCodes.BGTZ || ins == opCodes.BLTZ){
 			return 1;			
 		}
 
@@ -1723,6 +1757,10 @@ class Dissassembler{
 		rs=rt=sa=rd=0;
 		bool flag = 1;
 
+		//cout << "No dependant" << endl;
+		if(ins->ins == opCodes.BREAK)
+			return 1;
+		
 		if(ins->ins == opCodes.JR){
 			rs = 1;
 
@@ -1809,6 +1847,9 @@ class Dissassembler{
 		}else if(ins->ins == opCodes.XORI){
 			rs = 1;
 			rt = 1;
+
+		}else if(ins->ins == opCodes.LW){
+			rs = 1;
 
 		}
 
@@ -1836,6 +1877,7 @@ class Dissassembler{
 		rs=rt=sa=rd=0;
 		bool flag = 1;
 
+		
 		if(ins->ins == opCodes.JR){
 			rs = 1;
 
@@ -1923,6 +1965,9 @@ class Dissassembler{
 			rs = 1;
 			rt = 1;
 
+		}else if(ins->ins == opCodes.LW){
+			rs = 1;
+
 		}
 
 		if(rt){
@@ -1944,6 +1989,137 @@ class Dissassembler{
 		return 0;
 	}
 
+	int no_WAR_hazard(int ii){
+		instr_decoded *temp = pre_issue[ii];
+		int regis = get_destination_reg(temp);
+
+		if(!(temp->ins == opCodes.SW)){
+
+
+			bool flag_outer = 1;
+
+			for(int i=0;i<ii;i++){
+				bool rs,rt,sa,rd;
+				rs=rt=sa=rd=0;
+				bool flag = 1;
+				instr_decoded *ins = pre_issue[i];
+				
+				if(ins->ins == opCodes.JR){
+					rs = 1;
+
+				}else if(ins->ins == opCodes.BEQ){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.BLTZ){
+					rs = 1;
+
+				}else if(ins->ins == opCodes.BGTZ){
+					rs = 1;
+
+				}else if(ins->ins == opCodes.BREAK){
+					return 1;
+
+				}else if(ins->ins == opCodes.SW){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.LW){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.SLL){
+					rt = 1;
+					sa = 1; 
+
+				}else if(ins->ins == opCodes.SRL){
+					rt = 1;
+					sa = 1;
+
+				}else if(ins->ins == opCodes.SRA){
+					rt = 1;
+					sa = 1;
+
+				}else if(ins->ins == opCodes.NOP){
+					return 1;
+
+				}else if(ins->ins == opCodes.ADD){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.SUB){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.MUL){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.AND){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.OR){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.XOR){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.NOR){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.SLT){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.ADDI){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.ANDI){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.ORI){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.XORI){
+					rs = 1;
+					rt = 1;
+
+				}else if(ins->ins == opCodes.LW && ins->ins == opCodes.SW){
+					rs = 1;
+
+				}
+
+				
+
+				if(rt){
+					flag = flag & !(ins->rt == regis); 
+				}
+				if(rd){
+					flag = flag & !(ins->rd == regis); 
+				}
+				if(rs){
+					flag = flag & !(ins->rs == regis); 
+				}
+				if(sa){
+					flag = flag & !(ins->sa == regis); 
+				}
+
+				flag_outer = flag_outer & flag;
+
+				if(!flag_outer)
+					return 0;			
+			}
+		}
+		return 1;
+	}
+
 	bool no_issue_dependancy(int ii){
 		bool regs[32];
 		instr_decoded *ins;
@@ -1952,7 +2128,10 @@ class Dissassembler{
 			regs[i] = 0;
 		}
 		//todo not dependant on earlier not-issued instruction
-		if(no_dependancy(pre_issue[i])){
+		//cout << "No issue dependant" << endl;
+		//cout << "No issue dependant" << endl;
+		if(no_dependancy(pre_issue[ii]) && no_WAR_hazard(ii)){
+			//cout << "in for: No issue dependant" << endl;
 			for(int i = 0;i<ii;i++){
 				//check for earlier dependant
 				ins = pre_issue[i];
@@ -2021,12 +2200,16 @@ class Dissassembler{
 	//todo
 	void execute_branch(instr_decoded *ptr){
 		int pc = 0;
+		if(ptr->ins == opCodes.BREAK)
+			EXIT = 0;
+
 		if(ptr->ins == opCodes.J){
-			pc = ptr->signed_offset - 4;
+			pc = ptr->signed_offset;
 			PC = convert_PC_to_index(pc);
+			cout << "J CHANGED PC = " << PC << endl;
 
 		}else if(ptr->ins == opCodes.JR){
-			pc = twos_complement_2_num(R[ptr->rs]) - 4;
+			pc = twos_complement_2_num(R[ptr->rs]);
 			PC = convert_PC_to_index(pc);
 
 		}else if(ptr->ins == opCodes.BEQ){
@@ -2034,15 +2217,16 @@ class Dissassembler{
 			long rt_val = twos_complement_2_num(R[ptr->rt]);
 
 			if(rs_val == rt_val){
-				pc = ptr->PC + 4 + ptr->signed_offset - 4;
+				pc = ptr->PC + 4 + ptr->signed_offset;
 				PC = convert_PC_to_index(pc);
+				cout << "BEQ CHANGED PC = " << PC << endl;
 			}
 
 		}else if(ptr->ins == opCodes.BLTZ){
 			long rs_val = twos_complement_2_num(R[ptr->rs]);
 
 			if(rs_val < 0){
-				pc = ptr->PC + 4 + ptr->signed_offset - 4;
+				pc = ptr->PC + 4 + ptr->signed_offset;
 				PC = convert_PC_to_index(pc);
 			}
 
@@ -2050,7 +2234,7 @@ class Dissassembler{
 			long rs_val = twos_complement_2_num(R[ptr->rs]);
 
 			if(rs_val > 0){
-				pc = ptr->PC + 4 + ptr->signed_offset - 4;
+				pc = ptr->PC + 4 + ptr->signed_offset;
 				PC = convert_PC_to_index(pc);
 			}
 
@@ -2062,23 +2246,35 @@ class Dissassembler{
 		pre_issue[pre_issue_queue_entries-1] = ins;
 	}
 	
+	/*
 	void fetch_instr1(){
 		instr_decoded *instr_fetch = instr[PC];
 
+		if(instr_fetch->ins == opCodes.BREAK)
+			cout << "1-BREAK" << endl;
+
 		if(fetch_queue[1] != NULL){
 			if(no_dependancy(instr_fetch)){
-				PC++;
-				execute_branch(instr_fetch);
+				
+				fetch_queue[0] = instr_fetch;
+				fetch_queue[1] = NULL;
+
 			}
 			return;
+
+		}else if(fetch_queue[0] != NULL){
+				PC++;
+				execute_branch(instr_fetch);		
 		}
+
+
 		if(is_branch(instr_fetch)){
 			if(no_dependancy(instr_fetch)){
 				PC++;
 				fetch_queue[0] = instr_fetch;
 				execute_branch(instr_fetch);
 			}else{
-				PC++;
+				
 				fetch_queue[1] = instr_fetch;
 			}
 		}else{
@@ -2095,23 +2291,32 @@ class Dissassembler{
 
 	void fetch_instr(){
 		instr_decoded *instr_fetch = instr[PC];
+		instr_decoded *instr_fetch1 = instr[PC];
+		//cout << PC << endl;
+
+		if(instr_fetch->ins == opCodes.BREAK)
+			cout << "BREAK" << endl;
 
 		if(fetch_queue[1] != NULL){
 			if(no_dependancy(instr_fetch)){
-				PC++;
-				execute_branch(instr_fetch);
 				fetch_queue[1] = NULL;
+				fetch_queue[0] = fetch_queue[0];
 			}
 			return;
-		}
-		if(is_branch(instr_fetch)){
-			if(no_dependancy(instr_fetch)){
+
+		}else if(fetch_queue[0] != NULL){
 				PC++;
-				fetch_queue[0] = instr_fetch;
+				instr_fetch = fetch_queue[0];
+				fetch_queue[0] = NULL;
+		}
+
+
+		if(is_branch(instr_fetch)){
+			if(no_dependancy(instr_fetch) && pre_issue_queue_entries != 4){
 				execute_branch(instr_fetch);
 				fetch_queue[0] = NULL;
 			}else{
-				PC++;
+				
 				fetch_queue[1] = instr_fetch;
 			}
 		}else{
@@ -2126,23 +2331,142 @@ class Dissassembler{
 
 		
 	}
+	*/
+
+	void fetch_instr1(){
+		cout << "fetch two" << endl;
+		instr_decoded *fetch = instr[PC];		
+
+		
+		
+		if(fetch_queue[1] != NULL){
+			if(no_dependancy(fetch_queue[1])){
+				cout << "shifted to executed" << endl;
+				fetch_queue[0] = fetch_queue[1];
+				fetch_queue[1] = NULL;
+			}
+			return;
+		}
+
+		if(executed == 1){
+			cout << "Inside executed" << endl;
+			fetch_queue[0] = branch;
+			PC++;
+			execute_branch(fetch_queue[0]);
+			branch = NULL;
+			executed = 0;
+			fetch = instr[PC];
+			return;
+		}else if(fetch_queue[0] != NULL){
+			cout << "Inside fetch zero" << endl;
+			PC++;
+			execute_branch(fetch_queue[0]);
+			fetch_queue[0] = NULL;
+			fetch = instr[PC];
+			
+		}
+
+		if(is_branch(fetch)){
+			if(no_dependancy(fetch) && pre_issue_queue_entries != 4 && executed == 0){
+				executed = 1;
+				branch = fetch;
+				return;
+			}else{
+				if(pre_issue_queue_entries != 4){
+					fetch_queue[1] = fetch;
+					return;
+				}else{
+					return;
+				}
+			}
+		}else{
+			if(pre_issue_queue_entries > 2){
+				return;
+			}else{
+				PC++;
+				add_to_pre_issue_queue(fetch);
+				
+			}
+		}
+
+	}
+
+	void fetch_instr(){
+		cout << "fetch one" << endl;
+		instr_decoded *fetch = instr[PC];		
+
+		
+		
+		if(fetch_queue[1] != NULL){
+			if(no_dependancy(fetch_queue[1])){
+				cout << "shifted to executed" << endl;
+				fetch_queue[0] = fetch_queue[1];
+				fetch_queue[1] = NULL;
+			}
+			return;
+		}
+
+		if(executed == 1){
+			cout << "Inside executed" << endl;
+			fetch_queue[0] = branch;
+			PC++;
+			execute_branch(fetch_queue[0]);
+			branch = NULL;
+			executed = 0;
+			fetch = instr[PC];
+			return;
+		}else if(fetch_queue[0] != NULL){
+			cout << "Inside fetch zero" << endl;
+			PC++;
+			execute_branch(fetch_queue[0]);
+			fetch_queue[0] = NULL;
+			fetch = instr[PC];
+		}
+
+		if(is_branch(fetch)){
+			
+			if(no_dependancy(fetch) && pre_issue_queue_entries != 4 && executed == 0){
+				executed = 1;
+				branch = fetch;
+				return;
+			}else{
+				if(pre_issue_queue_entries != 4){
+					fetch_queue[1] = fetch;
+					return;
+				}else{
+					return;
+				}
+			}
+		}else{
+			if(pre_issue_queue_entries > 2){
+				return;
+			}else{
+				PC++;
+				add_to_pre_issue_queue(fetch);
+				fetch_instr1();
+			}
+		}
+
+	}
 
 	void add_to_pre_ALU1_queue(instr_decoded *ins){
 		
+		//cout << "add_to_pre_ALU1_queue" << endl;
 		if(pre_ALU1[0] == NULL){
 			pre_ALU1[0] = ins;
 		}else if(pre_ALU1[1] == NULL){
-			pre_ALU1[0] = ins;
+			pre_ALU1[1] = ins;
 		}
 
 	}
 
 	void add_to_pre_ALU2_queue(instr_decoded *ins){
 		
+		//cout << "add_to_pre_ALU2_queue" << endl;
 		if(pre_ALU2[0] == NULL){
 			pre_ALU2[0] = ins;
 		}else if(pre_ALU2[1] == NULL){
-			pre_ALU2[0] = ins;
+			pre_ALU2[1] = ins;
 		}
 	}
 
@@ -2165,28 +2489,37 @@ class Dissassembler{
 	}
 
 	bool no_more_SW(int ii){
-		for(int i=ii;i<pre_issue_queue_entries;i++){
+		for(int i=0;i<ii;i++){
 			if(pre_issue[i]->ins == opCodes.SW){
-				return 1;
+				return 0;
 			}
 		}
-		return 0;
+		return 1;
 	}
 
+	
 	void issue_instr(){
 		//todo -> no WAR hazard with earlier not-issued instruction
+
+		//cout << "issue_instr" << endl;
 		int counter = 0;
 		bool ALU1flag = 0;
 		bool ALU2flag = 0;
 
 		for(int i=0; i < pre_issue_queue_entries; i++){
+			if(pre_issue[i] == NULL){
+				break;
+			}
 			if(no_issue_dependancy(i) && counter < 2){
+				//cout << "Not dependant" << endl;
 				if(pre_issue[i]->ins == opCodes.LW || pre_issue[i]->ins == opCodes.SW){
 					if(pre_ALU1_queue_entries < 2 && ALU1flag == 0){
 						if(pre_issue[i]->ins == opCodes.LW && no_more_SW(i)){
+							
 							add_to_pre_ALU1_queue(pre_issue[i]);
 							remove_from_pre_issue(i);
 						}else if(pre_issue[i]->ins == opCodes.SW){
+							
 							add_to_pre_ALU1_queue(pre_issue[i]);
 							remove_from_pre_issue(i);
 						}
@@ -2194,7 +2527,9 @@ class Dissassembler{
 						ALU1flag = 1;
 					}
 				}else{
+					//cout << "Not branch" << endl;
 					if(pre_ALU2_queue_entries < 2 && ALU2flag == 0){
+						
 						add_to_pre_ALU2_queue(pre_issue[i]);
 						remove_from_pre_issue(i);
 						ALU2flag = 1;
@@ -2222,20 +2557,14 @@ class Dissassembler{
 	}
 
 	void ALU1(){
-		if(pre_ALU1[0] == NULL){
-			return;
-		}
-
+		
 		pre_MEM[0] = pre_ALU1[0];
 		pre_ALU1[0] = pre_ALU1[1];
 		pre_ALU1[1] = NULL;
 	}
 
 	void ALU2(){
-		if(pre_ALU2[0] == NULL){
-			return;
-		}
-
+		
 		post_ALU2[0] = pre_ALU2[0];
 		pre_ALU2[0] = pre_ALU2[1];
 		pre_ALU2[1] = NULL;
@@ -2259,6 +2588,8 @@ class Dissassembler{
 		}else if(instr_ALU2->ins == opCodes.ADD){
 			R1[instr_ALU2->rd] = R[instr_ALU2->rs] + R[instr_ALU2->rt];
 			reg_table1[instr_ALU2->rd] = reg_table.find(instr_ALU2->rd)->second - 1;
+
+			//cout << "======================================ADD" << endl;
 
 		}else if(instr_ALU2->ins == opCodes.SUB){
 			long rs_val = twos_complement_2_num(R[instr_ALU2->rs]);
@@ -2311,6 +2642,7 @@ class Dissassembler{
 			long rt_val = twos_complement_2_num(R[instr_ALU2->rt]);
 
 			R1[instr_ALU2->rt] = R[instr_ALU2->rs] + num_2_twos_complement(instr_ALU2->signed_offset);
+			//cout << "ADDI = " << instr_ALU2->signed_offset << endl;
 			reg_table1[instr_ALU2->rt] = reg_table.find(instr_ALU2->rt)->second - 1;
 
 		}else if(instr_ALU2->ins == opCodes.ANDI){
@@ -2355,12 +2687,33 @@ class Dissassembler{
 	}
 
 	void WB_data(){
+		for(int i=0;i<32;i++){
+			if(!(R1[i] == zero)){
+				R[i].copy(R1[i]);
+			}
+
+			if(reg_table1.find(i)->second != -1){
+				reg_table[i] = reg_table1.find(i)->second;
+			}
+		}
+
+		for(int i=0;i<32;i++){
+			reg_table1[i] = -1;
+		}
+
+		for(int i=0;i<32;i++){
+			R1[i] = 0;
+		}
+	}
+
+	void WB(){
 		if(post_MEM[0] != NULL){
 			ALU1_exec();
 			post_MEM[0] = NULL;
 		}
 
 		if(post_ALU2[0] != NULL){
+			//cout << "================================================Not NULL" << endl;
 			ALU2_exec();
 			post_ALU2[0] = NULL;
 		}
@@ -2370,16 +2723,45 @@ class Dissassembler{
 	void simulate(){
 		PC = 0;
 		CYCLE = 1;
+		bool fetch_flag = 1;
+
+
 
 		while(CYCLE < 30){
-			WB_data();
+			if(pre_issue_queue_entries == 4){
+				fetch_flag = 0;
+			}
+
+			cout << "PC: " << PC << endl;
+
+			//cout << "Write back--------------------------------------------------------" << endl;
+			WB();
+			//print_all();
+			//cout << "MEM Load Store----------------------------------------------------" << endl;
 			MEM_load_store();
+			//print_all();
+			//cout << "ALU2----------------------------------------------------------------" << endl;
 			ALU2();
+			//print_all();
+			//cout << "ALU1------------------------------------------------------------------" << endl;
 			ALU1();
+			//print_all();
+			//cout << "issue------------------------------------------------------------------" << endl;
 			issue_instr();
-			fetch_instr();			
+			//print_all();
+			if(fetch_flag){
+				//cout << "fetch-------------------------------------------------------------------" << endl;
+				fetch_instr();
+				//print_all();
+			}
+			//cout << "WB data------------------------------------------------------------------" << endl;
+			WB_data();
 			
 			print_all();
+
+			//flags
+			fetch_flag = 1;
+
 		}
 	}
 
@@ -2414,6 +2796,7 @@ int main(int argc, char* argv[]){
 		//dis.R[9] = dis.num_2_twos_complement(10);
 		dis.decoder();
 		dis.create_map();
+		//dis.print_instr_str();
 		dis.simulate();
 
 		//cout << dis.code_size << endl;
